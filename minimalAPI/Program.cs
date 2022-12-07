@@ -16,6 +16,15 @@ builder.Services.AddSwaggerGen(c =>
          Title = "Santa API",
          Description = "Making sure every good kid gets a gift",
          Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Auth header using bearer",
+        Name = "Authroization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
 });
 // This setups up our swagger info
 
@@ -45,7 +54,7 @@ app.Urls.Add("http://localhost:5000");
 app.Urls.Add("https://localhost:5001");
 // Defining the URLs and ports to run on
 
-
+// NEW Typed Results! 
 app.MapGet("/", () => "Hello World!");
 // This line is declaring a HTTP GET route at the root that 
 // will return the string hello world
