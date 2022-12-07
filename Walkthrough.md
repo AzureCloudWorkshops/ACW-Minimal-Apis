@@ -212,6 +212,119 @@ app.MapPut("/Child", async (SantaDbContext db, bool isGood, int id) => {
 ```
 Next it is for the elves! 
 ``` cs
+app.MapGet("/Gift/NeedingBuilt", async (SantaDbContext db) => await db.Gifts.Where(x => x.shouldBeBuilt && !x.startedBuilding).ToListAsync());
+app.MapPut("/Gift/StartedBuilding/{id}", async (int id, SantaDbContext db) => {
+    var giftToUpdate = await db.Gifts.FindAsync(id);
 
+    if (giftToUpdate is null) return Results.NotFound();
+
+    giftToUpdate.startedBuilding = true;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+app.MapPut("/Gift/Finished/{id}", async (int id, SantaDbContext db) => {
+    var giftToUpdate = await db.Gifts.FindAsync(id);
+
+    if (giftToUpdate is null) return Results.NotFound();
+
+    var childToUpdate = await db.Children.Include(x => x.wantedItem).FirstOrDefaultAsync(x => x.wantedItem.Id == id);
+
+    if (childToUpdate is null) return Results.NotFound();
+
+    giftToUpdate.isCompleted = true;
+    childToUpdate.presentReadyForDelivery = true;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+```
+Now our api alone is setup. Santa can setup a child to monitor, deem him good, have an elf see that the toy is ready to be built, a few different statuses to show where the gift is in the process, and finally ready to delivery. Now we are here what's next? Well, what if we get a disgruntled child, what if we get an elf that wants to override Santa, or what even Santa wants to overwrite what the elves are doing? If you are in security or reporting role you are cringing on all of the ways our simple API could be taken advantage of, so in order to stop that lets establish some roles at a minimum so we know who is hitting our API and determine their eligibility to do so.
+
+### Authentication and Authorization
+
+The first thing we need to do is start to lock down our program.cs it will look like adding these two lines above our var app section
+``` cs
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
+```
+and before app.run we want to add the following code 
+``` cs
+builder.Services.AddCors();
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireSantaRole",
+        policy => policy.RequireRole("SantaRole"));
+    options.AddPolicy("RequireElfRole",
+        policy => policy.RequireRole("ElfRole"));
+});
+```
+Finally we need to add the correct role to the correct endpoints like the following:
+``` cs
+    .RequireAuthorization("RequireSantaRole");
+    // OR 
+    .RequireAuthorization("RequireElfRole");
+```
+Now that we have that in place we can actually use CLI commands to test our stuff! That's something new I found out when running through this personally. So with the following command we can generate a JWT token and then set a specific role and scope!
+``` bash
+dotnet user-jwts create --scope "greetings_api" --role "SantaRole"
+```
+This will dump out a JWT token that will have our Santa role and throw an error if we use it to hit an elf end point! Then to use the token we can also use the API like so 
+``` bash
+curl -i -H "Authorization: Bearer {token}" https://localhost:{port}/hello
+```
+Now we should get a 200 from our API! We can also use the JWT token in Swagger to use swagger to hit our endpoints moving forward if we'd like!
+
+### Deploy to Azure
+Now that we have this built we want to get it to Santa. In terms of the holiday season load can be huge! However, once everyone gets their gifts demand on this API will be zero or close to zero. Due to that we are going to containerize our app so it can easily go to any cloud and we are going to use Azure Container Apps to get a lot of the benefits of Azure Kubernetes Service without having to manage a whole cluster. e are going to login into our Azure subscription (create one if you haven't), make sure we have the latest version of the CLI, add the container app extension. We are then going to get everything in the cloud ready for cloud builds so we don't have to run this locally and then we are going to publish our image. 
+
+``` bash
+az upgrade
+az extension add --name containerapp --upgrade
+az provider register --namespace Microsoft.App
+az provider register --namespace Microsoft.OperationalInsights
+
+# Declares variables
+RESOURCE_GROUP=testACARG
+LOCATION=CentralUS
+ACR_NAME=mytestacrwalkthrough
+API_NAME=minimalapi
+ENVIRONMENT=containerAppEnvName
+
+# Creates resource group
+az group create \
+  --name $RESOURCE_GROUP \
+  --location "$LOCATION"
+
+# Creates Azure container registry
+az acr create \
+  --resource-group $RESOURCE_GROUP \
+  --name $ACR_NAME \
+  --sku Basic \
+  --admin-enabled true
+
+# Build application
+az acr build --registry $ACR_NAME --image $API_NAME .
+
+# Create container app env
+az containerapp env create \
+  --name $ENVIRONMENT \
+  --resource-group $RESOURCE_GROUP \
+  --location "$LOCATION"
+
+# Deploy image to container app env
+az containerapp create \
+  --name $API_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --environment $ENVIRONMENT \
+  --image $ACR_NAME.azurecr.io/$API_NAME \
+  --target-port 5001 \
+  --ingress 'external' \
+  --registry-server $ACR_NAME.azurecr.io \
+  --query properties.configuration.ingress.fqdn
+```
+Now we have a deployed ACA container and can hit it anywhere in the world!
 # References  
 - https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-7.0 
