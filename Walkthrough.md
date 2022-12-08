@@ -23,7 +23,9 @@ Now for this project we are also going to want to use EF core so go ahead and in
 ``` bash 
 dotnet add package Microsoft.EntityFrameworkCore.InMemory
 dotnet add package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore
-dotnet add package Swashbuckle.AspNetCore --version 6.2.3
+dotnet add package Swashbuckle.AspNetCore
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add package Microsoft.NET.Build.Containers
 ```
 
 Now if we look at our file we have an API!
@@ -291,7 +293,7 @@ RESOURCE_GROUP=testACARG
 LOCATION=CentralUS
 ACR_NAME=mytestacrwalkthrough
 API_NAME=minimalapi
-ENVIRONMENT=containerAppEnvName
+ENVIRONMENT=containerAppEnvName1
 
 # Creates resource group
 az group create \
@@ -312,19 +314,14 @@ az acr build --registry $ACR_NAME --image $API_NAME .
 az containerapp env create \
   --name $ENVIRONMENT \
   --resource-group $RESOURCE_GROUP \
-  --location "$LOCATION"
+  --location "$LOCATION" \
+  --internal-only false
 
 # Deploy image to container app env
-az containerapp create \
-  --name $API_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --environment $ENVIRONMENT \
-  --image $ACR_NAME.azurecr.io/$API_NAME \
-  --target-port 5001 \
-  --ingress 'external' \
-  --registry-server $ACR_NAME.azurecr.io \
-  --query properties.configuration.ingress.fqdn
+az containerapp compose create -g $RESOURCE_GROUP --environment $ENVIRONMENT --compose-file-path "docker-compose.yml"
 ```
 Now we have a deployed ACA container and can hit it anywhere in the world!
+
+
 # References  
 - https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-7.0 

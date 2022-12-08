@@ -5,14 +5,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>abb68eea-9bbf-423f-9562-7409a13f4289</UserSecretsId>
+    <!-- <ContainerImageName>dotnet-worker-image</ContainerImageName> -->
+    <!-- <ContainerRegistry>mytestacrwalkthrough.azurecr.io</ContainerRegistry> -->
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'https' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="7.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.0" />
+    <PackageReference Include="Microsoft.NET.Build.Containers" Version="0.2.7" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
 
