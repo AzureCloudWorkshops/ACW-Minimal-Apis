@@ -302,11 +302,13 @@ az extension add --name containerapp --upgrade
 az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.OperationalInsights
 
+dotnet dev-certs https -ep $env:USERPROFILE\.aspnet\https\aspnetapp.pfx -p crypticpassword
+dotnet dev-certs https --trust
 # Declares variables
-RESOURCE_GROUP=testACARG
+RESOURCE_GROUP=acwdotnetug
 LOCATION=CentralUS
-ACR_NAME=mytestacrwalkthrough
-API_NAME=minimalapi
+ACR_NAME=mytestacrwalkthrough123
+API_NAME=minimalapi123
 ENVIRONMENT=containerAppEnvName1
 
 # Creates resource group
@@ -320,9 +322,6 @@ az acr create \
   --name $ACR_NAME \
   --sku Basic \
   --admin-enabled true
-
-# Build application
-az acr build --registry $ACR_NAME --image $API_NAME .
 
 # Create container app env
 az containerapp env create \
