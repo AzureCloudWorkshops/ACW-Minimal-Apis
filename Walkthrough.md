@@ -307,9 +307,9 @@ dotnet dev-certs https --trust
 # Declares variables
 RESOURCE_GROUP=acwdotnetug
 LOCATION=CentralUS
-ACR_NAME=mytestacrwalkthrough123
-API_NAME=minimalapi123
-ENVIRONMENT=containerAppEnvName1
+ACR_NAME=mytestacrwalkthrough
+API_NAME=minimalapi
+ENVIRONMENT=containerAppEnvName
 
 # Creates resource group
 az group create \
